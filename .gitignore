@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+
+.idea/
+*.sln.iml
+
+*.user
+*.rsuser
+*.suo
+
+.vs/
