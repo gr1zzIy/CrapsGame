@@ -1,108 +1,79 @@
 namespace CrapsGame.Core;
 
-/// <summary>
-/// Основний двигун гри Craps, який відповідає за логіку раундів, правила ставок та зміну фаз.
-/// </summary>
+public record StepResult(
+    int Dice1, 
+    int Dice2, 
+    int Total, 
+    GamePhase NewPhase, 
+    int NewPoint,
+    List<(ActiveBet Bet, BetOutcome Outcome)> EvaluatedBets
+);
+
 public class CrapsEngine
 {
     private readonly IDiceRoller _diceRoller;
-
-    /// <summary>
-    /// Поточна фаза гри (ComeOut або Point).
-    /// </summary>
     public GamePhase CurrentPhase { get; private set; } = GamePhase.ComeOut;
-
-    /// <summary>
-    /// Встановлене очко (Point) для поточної фази гри. Рівне 0, якщо фаза ComeOut.
-    /// </summary>
     public int Point { get; private set; } = 0;
 
-    /// <summary>
-    /// Ініціалізує новий екземпляр двигуна гри.
-    /// </summary>
-    /// <param name="diceRoller">Генератор кубиків (інтерфейс).</param>
     public CrapsEngine(IDiceRoller diceRoller)
     {
         _diceRoller = diceRoller ?? throw new ArgumentNullException(nameof(diceRoller));
     }
 
     /// <summary>
-    /// Виконує ігровий крок: робить кидок кубиків та розраховує результат для конкретної ставки.
+    /// Робить кидок та оцінює ВСІ активні ставки на столі.
     /// </summary>
-    /// <param name="betType">Тип ставки, яку зробив гравець.</param>
-    /// <returns>Кортеж із детальними результатами кидка та фінальним статусом раунду.</returns>
-    public (int Dice1, int Dice2, int Total, RoundResult Result) ExecuteStep(BetType betType)
+    public StepResult ExecuteStep(List<ActiveBet> activeBets)
     {
-        if (betType != BetType.PassLine)
+        if (activeBets == null || activeBets.Count == 0)
         {
-            throw new NotImplementedException($"Поки тільки {nameof(BetType.PassLine)}.");
+            throw new ArgumentException("На столі має бути хоча б одна ставка.");
         }
 
-        // Двигун сам викликає кубики
-        var (dice1, dice2, total) = _diceRoller.Roll();
+        // 1. Кидаємо кубики
+        var (d1, d2, total) = _diceRoller.Roll();
 
-        // Розраховуємо результат залежно від поточної фази
-        RoundResult result = CurrentPhase == GamePhase.ComeOut 
-            ? HandleComeOutPhase(total) 
-            : HandlePointPhase(total);
+        // 2. Спочатку розраховуємо ставки, спираючись на ПОТОЧНИЙ стан столу
+        var evaluatedBets = new List<(ActiveBet Bet, BetOutcome Outcome)>();
+        foreach (var bet in activeBets)
+        {
+            var outcome = CrapsBetEvaluator.Evaluate(bet, d1, d2, total, CurrentPhase, Point);
+            evaluatedBets.TupleOnIteration(bet, outcome); // Додаємо в репорт
+        }
 
-        return (dice1, dice2, total, result);
+        // 3. Оновлюємо стан самого двигуна (фазу та Point)
+        UpdateTableState(total);
+
+        return new StepResult(d1, d2, total, CurrentPhase, Point, evaluatedBets);
     }
 
-    /// <summary>
-    /// Логіка обробки першого кидка (Come-Out Roll).
-    /// </summary>
-    private RoundResult HandleComeOutPhase(int total)
+    private void UpdateTableState(int total)
     {
-        // Натуральні числа (7 або 11) == миттєвий виграш на Pass Line
-        if (total == 7 || total == 11)
+        if (CurrentPhase == GamePhase.ComeOut)
         {
-            ResetGame();
-            return RoundResult.PlayerWin;
+            // Якщо не виграш/програш для PassLine, то встановлюється Point
+            if (total is not (7 or 11 or 2 or 3 or 12))
+            {
+                Point = total;
+                CurrentPhase = GamePhase.Point;
+            }
         }
-        
-        // Craps (2, 3 або 12) == миттєвий програш на Pass Line
-        if (total == 2 || total == 3 || total == 12)
+        else // GamePhase.Point
         {
-            ResetGame();
-            return RoundResult.PlayerLose;
+            // Якщо випав Point або 7, раунд завершується, повертаємось до ComeOut
+            if (total == Point || total == 7)
+            {
+                CurrentPhase = GamePhase.ComeOut;
+                Point = 0;
+            }
         }
-
-        // Будь-яке інше число (4, 5, 6, 8, 9, 10) встановлює "Point"
-        Point = total;
-        CurrentPhase = GamePhase.Point;
-        return RoundResult.InProgress;
     }
+}
 
-    /// <summary>
-    /// Логіка обробки кидків після встановлення очка (Point Phase).
-    /// </summary>
-    private RoundResult HandlePointPhase(int total)
-    {
-        // Якщо випав ваш Point раніше, ніж 7 == ви виграли
-        if (total == Point)
-        {
-            ResetGame();
-            return RoundResult.PlayerWin;
-        }
-
-        // Якщо випала сімка ("Seven-Out") == ви програли, раунд завершено
-        if (total == 7)
-        {
-            ResetGame();
-            return RoundResult.PlayerLose;
-        }
-
-        // Випало будь-яке інше число == раунд продовжується, потрібен наступний кидок
-        return RoundResult.InProgress;
-    }
-
-    /// <summary>
-    /// Скидає стан двигуна до початкових значень перед новим раундом.
-    /// </summary>
-    private void ResetGame()
-    {
-        CurrentPhase = GamePhase.ComeOut;
-        Point = 0;
-    }
+/// <summary>
+/// Хелпер для зручності додавання в список
+/// </summary>
+static class Extensions {
+    public static void TupleOnIteration(this List<(ActiveBet, BetOutcome)> list, ActiveBet b, BetOutcome o) 
+        => list.Add((b, o));
 }
