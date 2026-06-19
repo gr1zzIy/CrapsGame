@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrapsGame.Core", "CrapsGame.Core\CrapsGame.Core.csproj", "{517B56A2-0312-42B0-8907-B6FBC928188E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrapsGame.ConsoleVersion", "CrapsGame.ConsoleVersion\CrapsGame.ConsoleVersion.csproj", "{E50B7CE6-CD93-4123-89E7-BF68B3B69A16}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{517B56A2-0312-42B0-8907-B6FBC928188E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{517B56A2-0312-42B0-8907-B6FBC928188E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{517B56A2-0312-42B0-8907-B6FBC928188E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E50B7CE6-CD93-4123-89E7-BF68B3B69A16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E50B7CE6-CD93-4123-89E7-BF68B3B69A16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E50B7CE6-CD93-4123-89E7-BF68B3B69A16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E50B7CE6-CD93-4123-89E7-BF68B3B69A16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
